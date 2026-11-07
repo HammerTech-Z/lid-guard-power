@@ -1,58 +1,62 @@
-# lid-guard-power —— MacBook 合盖电源策略（可开关）
+# lid-guard-power v1.1.0
 
-> 这是一个 macOS 电源策略小工具：让 MacBook 在**插电合盖**时保持运行并锁屏（后台任务不中断），
-> 在**电池合盖**时正常休眠。开启/关闭都是一条命令。
-> 详细步骤见 [使用说明.md](使用说明.md)，验证记录见 [EVIDENCE.md](EVIDENCE.md)。
-
-让 MacBook Air/Pro 达到你要的三条行为：
+给 MacBook 配置可关闭的合盖电源策略：**插电合盖保持运行并请求熄屏锁定，电池合盖休眠**。
+后台任务可在插电合盖时继续执行。不是 macOS 状态栏插件，无需安装第三方运行时。
 
 | 场景 | 行为 |
 |---|---|
-| 插电 + 合盖 | 保持系统运行、熄屏并锁定会话（需要密码或 Touch ID 解锁），后台任务继续跑 |
-| 电池 + 合盖 | 整机休眠，开盖后唤醒并解锁 |
-| 开盖 | 正常使用 |
+| 插电、合盖 | 禁止系统休眠，请求显示器休眠；检查会话锁定信号并在未确认时重试 |
+| 电池、合盖 | 恢复允许休眠并请求整机睡眠 |
+| 开盖 | 正常交互；插电期间仍禁止系统休眠 |
 
-通过系统自带的 `pmset disablesleep`（插电禁止休眠）+ `pmset displaysleepnow`（熄屏锁定）实现，
-不修改电池/插电的空闲熄屏与休眠时间，也不改动 macOS 自身的温控设置。
+## 下载与使用
 
-## 使用
+从 [Releases](https://github.com/HammerTech-Z/lid-guard-power/releases/latest) 下载 ZIP，解压后保留完整文件夹。
+双击 `enable.command` 开启、`disable.command` 关闭、`status.command` 查看状态。
+安装和关闭需要你在 macOS 系统窗口中输入管理员密码。
 
-```sh
-bash status.sh                 # 查看当前状态（不需要管理员权限）
-sudo bash enable.sh            # 开启
-sudo bash disable.sh           # 关闭，恢复系统默认行为
+也可以交给 Mac 上能执行本地 shell 的 agent harness，运行：
+
+```bash
+bash install-for-agent.sh --check
+bash install-for-agent.sh --install
 ```
 
-macOS 用户可以直接双击 `enable.command` / `disable.command` / `status.command`，
-前两个会弹出系统管理员认证窗口。
+先把终端目录切换到解压后的文件夹。`--check` 只读；无参数等同 `--install`。
+卸载使用 `bash install-for-agent.sh --uninstall`。安装授权不能由 agent 替你输入密码。
+无图形登录会话或 harness 沙箱不允许执行 `osascript` 时，请在本机终端运行命令。
 
-> 如果解压后双击没反应（提示权限不足），先执行一次 `chmod +x *.command *.sh`。
+**安装前提：**系统设置 → 锁定屏幕 → 在屏幕保护程序启动或显示器关闭后要求输入密码 → **立即**。
+安装器会核对该设置，无法确认时拒绝安装；本工具不会修改密码策略。
 
-## 包内文件
+详细步骤：[使用说明.md](使用说明.md)；版本变更：[CHANGELOG.md](CHANGELOG.md)；验证范围：[EVIDENCE.md](EVIDENCE.md)。
 
-| 文件 | 说明 |
-|---|---|
-| `lid-guard.sh` | 守护进程脚本本体（每秒轮询供电与合盖状态） |
-| `enable.sh` | 安装脚本、写入 LaunchDaemon、启动并校验 |
-| `disable.sh` | 停止服务、恢复正常休眠、移除文件 |
-| `status.sh` | 查看供电/合盖/锁定状态与最近日志 |
-| `tests/test_policy.py` | 21 个隔离场景的回归测试，不触碰真实电源设置 |
+## 安全退出与升级
 
-`enable.sh` 会把已存在的 `/usr/local/bin/lid-guard.sh` 备份为 `lid-guard.sh.bak-<时间戳>`；
-`disable.sh` 会把脚本移走而不是直接删除，想恢复可以手动移回并重新 `enable.sh`。
+重复开启会升级脚本并保留旧脚本备份。安装/关闭失败会返回非零退出码并尝试恢复操作前文件、
+服务加载状态和休眠开关；若恢复失败，会报告备份路径，不能当作成功。
+关闭成功时会卸载服务并确认 `SleepDisabled=0`，保留 `.disabled-*` 脚本副本。
+不修改原有空闲熄屏时间、电池休眠时间或 macOS 温控设置。
 
-## 回归测试
+## 验证
 
-```sh
-python3 tests/test_policy.py ./lid-guard.sh
+安装不依赖 Python。开发回归需要 macOS 与 Python 3：
+
+```bash
+python3 tests/test_policy.py
+python3 tests/test_lifecycle.py
+python3 tests/test_launchers.py
+python3 tests/test_status.py
 ```
 
-macOS 大版本升级后建议重跑一次，确认合盖策略没有随系统行为变化而失效。
+这些测试使用隔离文件和系统调用替身，不申请管理员授权、不改真实电源设置。
+通过测试不代表完成新机型的物理合盖验证。
 
-## 已知限制
+## 限制
 
-- 这是每秒轮询的定制策略，插拔电源的识别存在最多约 1 秒延迟。
-- `disablesleep` 是系统级开关：插电期间手动合盖以外的手动睡眠也会被禁止。
-- 读取传感器与执行系统调用无法原子化，极端时序下可能有边界情况。
-- 未在长时间满载合盖的场景下实测；无风扇机型合盖持续运行时请保持通风，不要放进包里。
-- 不承诺绝对没有缺陷。
+- 仅面向有合盖传感器的 MacBook；本次运行环境为 macOS 26.6.2，未验证所有机型与系统版本。
+- 每秒轮询，检测延迟至少一个轮询周期，系统忙碌时可能更久。
+- `disablesleep` 是系统级开关，插电期间手动选择“睡眠”也会被禁止；用完请关闭工具。
+- 熄屏请求本身不是锁屏证明；以 `locked=1` 和实际开盖需解锁为准。系统密码策略变更后需复查。
+- 不能保证断电、强制终止或系统命令持续失败时都能自动恢复；其他电源工具可能覆盖本工具设置。
+- 无长时间满载合盖测试；保持通风，不要放进包里运行。不承诺绝对零缺陷。

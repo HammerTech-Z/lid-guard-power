@@ -1,6 +1,6 @@
 from pathlib import Path
 import os,subprocess,tempfile,sys,hashlib,json
-source=Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).with_name('lid-guard.sh')
+source=Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).resolve().parents[1]/'lid-guard.sh'
 root=Path(tempfile.mkdtemp(prefix='lid-policy-test-'))
 src=source.read_text()
 assert '/usr/libexec/smcDiagnose' not in src and 'powermetrics' not in src
