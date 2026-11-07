@@ -1,10 +1,9 @@
 #!/bin/bash
-# 双击运行；会弹出系统管理员认证窗口
+set -eu
 PKG_DIR=$(cd "$(dirname "$0")" && pwd)
-SCRIPT="$PKG_DIR/disable.sh"
-if ! osascript <<EOF
-do shell script "/bin/bash '"'"'"$SCRIPT"'"'"'" with administrator privileges
-EOF
-then
-  echo "操作失败或被取消"
-fi
+exec /usr/bin/osascript - "$PKG_DIR/disable.sh" <<'APPLESCRIPT'
+on run argv
+    set scriptPath to item 1 of argv
+    do shell script "/bin/bash " & quoted form of scriptPath with administrator privileges
+end run
+APPLESCRIPT
