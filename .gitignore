@@ -1,0 +1,5 @@
+.DS_Store
+*.disabled-*
+*.bak-*
+latest-test.json
+__pycache__/
