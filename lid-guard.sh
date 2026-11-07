@@ -1,5 +1,5 @@
 #!/bin/bash
-# lid-guard v5.0-normal: AC + closed = awake and locked; battery + closed = sleep.
+# lid-guard 1.1.0: AC + closed = awake and locked; battery + closed = sleep.
 # Uses the existing immediate-password policy. No custom temperature-triggered sleep.
 set -u
 PATH=/usr/bin:/bin:/usr/sbin:/sbin
@@ -95,7 +95,7 @@ request_battery_sleep() {
 publish_state() {
   read_disabled; read_locked
   ac=unknown; [ "$power" = ac ] && ac=1; [ "$power" = battery ] && ac=0
-  printf 'version=v5.0-normal mode=%s power=%s ac=%s lid=%s disabled=%s locked=%s fused=0 temp=n/a pid=%s %s\n' \
+  printf 'version=1.1.0 mode=%s power=%s ac=%s lid=%s disabled=%s locked=%s fused=0 temp=n/a pid=%s %s\n' \
     "$mode" "$power" "$ac" "$lid" "$disabled" "$locked" "$$" "$(date '+%F %T')" \
     > "${STATE}.tmp.$$" && mv -f "${STATE}.tmp.$$" "$STATE"
 }
@@ -106,7 +106,7 @@ cleanup() {
   exit 0
 }
 trap cleanup TERM INT HUP
-log "daemon start (pid $$) v5.0-normal"
+log "daemon start (pid $$) 1.1.0"
 last_lock=0
 last_sleep=0
 prev_power=unknown
