@@ -15,8 +15,6 @@
 通过系统自带的 `pmset disablesleep`（插电禁止休眠）+ `pmset displaysleepnow`（熄屏锁定）实现，
 不修改电池/插电的空闲熄屏与休眠时间，也不改动 macOS 自身的温控设置。
 
-## 使用方法（详细步骤见 [使用说明.md](使用说明.md)）
-
 ## 使用
 
 ```sh
